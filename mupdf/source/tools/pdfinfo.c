@@ -169,8 +169,9 @@ showglobalinfo(globals *glo)
 	pdf_obj *obj;
 	fz_output *out = glo->out;
 	pdf_document *doc = glo->doc;
+	int version = pdf_version(doc);
 
-	fz_printf(out, "\nPDF-%d.%d\n", doc->version / 10, doc->version % 10);
+	fz_printf(out, "\nPDF-%d.%d\n", version / 10, version % 10);
 
 	obj = pdf_dict_gets(pdf_trailer(doc), "Info");
 	if (obj)

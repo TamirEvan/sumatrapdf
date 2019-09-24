@@ -87,6 +87,7 @@ fz_buffer *pdf_load_raw_renumbered_stream(pdf_document *doc, int num, int gen, i
 fz_buffer *pdf_load_renumbered_stream(pdf_document *doc, int num, int gen, int orig_num, int orig_gen, int *truncated);
 fz_stream *pdf_open_raw_renumbered_stream(pdf_document *doc, int num, int gen, int orig_num, int orig_gen);
 
+int pdf_version(pdf_document *doc);
 pdf_obj *pdf_trailer(pdf_document *doc);
 void pdf_set_populating_xref_trailer(pdf_document *doc, pdf_obj *trailer);
 int pdf_xref_len(pdf_document *doc);

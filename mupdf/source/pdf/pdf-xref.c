@@ -467,6 +467,27 @@ void pdf_replace_xref(pdf_document *doc, pdf_xref_entry *entries, int n)
  * magic version tag and startxref
  */
 
+int
+pdf_version(pdf_document *doc)
+{
+       int version = doc->version;
+       fz_context *ctx = doc->ctx;
+
+       fz_try(ctx)
+       {
+               pdf_obj *obj = pdf_dict_getp(pdf_trailer(doc), "Root/Version");
+               const char *str = pdf_to_name(obj);
+               if (*str)
+                       version = 10 * (fz_atof(str) + 0.05f);
+       }
+       fz_catch(ctx)
+       {
+               fz_rethrow_if(ctx, FZ_ERROR_TRYLATER);
+               fz_warn(ctx, "Ignoring broken Root/Version number.");
+       }
+       return version;
+}
+
 static void
 pdf_load_version(pdf_document *doc)
 {
@@ -1459,20 +1480,6 @@ pdf_init_document(pdf_document *doc)
 	{
 		fz_warn(ctx, "Ignoring Broken Optional Content");
 	}
-
-	fz_try(ctx)
-	{
-		char *version_str;
-		obj = pdf_dict_getp(pdf_trailer(doc), "Root/Version");
-		version_str = pdf_to_name(obj);
-		if (*version_str)
-		{
-			int version = 10 * (fz_atof(version_str) + 0.05);
-			if (version > doc->version)
-				doc->version = version;
-		}
-	}
-	fz_catch(ctx) { }
 }
 
 void
@@ -2188,7 +2195,10 @@ pdf_meta(pdf_document *doc, int key, void *ptr, int size)
 		Returns: Document format as a brief text string.
 	*/
 	case FZ_META_FORMAT_INFO:
-		sprintf((char *)ptr, "PDF %d.%d", doc->version/10, doc->version % 10);
+		{
+			int version = pdf_version(doc);
+			sprintf((char *)ptr, "PDF %d.%d", version/10, version % 10);
+		}
 		return FZ_META_OK;
 	case FZ_META_CRYPT_INFO:
 		if (doc->crypt)

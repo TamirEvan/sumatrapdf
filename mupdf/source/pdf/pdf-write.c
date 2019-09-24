@@ -2071,7 +2071,8 @@ writeobjects(pdf_document *doc, pdf_write_options *opts, int pass)
 
 	if (!opts->do_incremental)
 	{
-		fprintf(opts->out, "%%PDF-%d.%d\n", doc->version / 10, doc->version % 10);
+		int version = pdf_version(doc);
+		fprintf(opts->out, "%%PDF-%d.%d\n", version / 10, version % 10);
 		fprintf(opts->out, "%%\316\274\341\277\246\n\n");
 	}
 
