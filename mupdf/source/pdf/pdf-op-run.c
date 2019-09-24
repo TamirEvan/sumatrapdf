@@ -1,5 +1,7 @@
 #include "pdf-interpret-imp.h"
 
+extern pdf_ocg_descriptor *pdf_read_ocg(pdf_document *doc);
+
 #define TILE
 
 /*
@@ -150,7 +152,7 @@ pdf_is_hidden_ocg(pdf_obj *ocg, pdf_csi *csi, pdf_run_state *pr, pdf_obj *rdb)
 	char event_state[16];
 	pdf_obj *obj, *obj2;
 	char *type;
-	pdf_ocg_descriptor *desc = csi->doc->ocg;
+	pdf_ocg_descriptor *desc = pdf_read_ocg(csi->doc);
 	fz_context *ctx = csi->doc->ctx;
 
 	/* Avoid infinite recursions */

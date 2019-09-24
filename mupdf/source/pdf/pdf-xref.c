@@ -1,6 +1,9 @@
 #include "mupdf/pdf.h"
 #include "mupdf/fitz/document.h"
 
+pdf_ocg_descriptor *pdf_read_ocg(pdf_document *doc);
+static void pdf_free_ocg(fz_context *ctx, pdf_ocg_descriptor *desc);
+
 #undef DEBUG_PROGESSIVE_ADVANCE
 
 #ifdef DEBUG_PROGESSIVE_ADVANCE
@@ -1182,7 +1185,7 @@ void
 pdf_ocg_set_config(pdf_document *doc, int config)
 {
 	int i, j, len, len2;
-	pdf_ocg_descriptor *desc = doc->ocg;
+	pdf_ocg_descriptor *desc = pdf_read_ocg(doc);
 	pdf_obj *obj, *cobj;
 	char *name;
 
@@ -1282,48 +1285,44 @@ pdf_ocg_set_config(pdf_document *doc, int config)
 	 * an app that needs it) */
 }
 
-static void
+pdf_ocg_descriptor *
 pdf_read_ocg(pdf_document *doc)
 {
-	pdf_obj *obj, *ocg;
+	pdf_obj *obj, *ocgs;
 	int len, i;
-	pdf_ocg_descriptor *desc;
 	fz_context *ctx = doc->ctx;
 
-	fz_var(desc);
+	if (doc->ocg)
+		return doc->ocg;
 
-	obj = pdf_dict_gets(pdf_dict_gets(pdf_trailer(doc), "Root"), "OCProperties");
-	if (!obj)
-		return;
-	ocg = pdf_dict_gets(obj, "OCGs");
-	if (!ocg || !pdf_is_array(ocg))
-		/* Not ever supposed to happen, but live with it. */
-		return;
-	len = pdf_array_len(ocg);
 	fz_try(ctx)
 	{
-		desc = fz_calloc(ctx, 1, sizeof(*desc));
-		desc->len = len;
-		desc->ocgs = fz_calloc(ctx, len, sizeof(*desc->ocgs));
-		desc->intent = NULL;
+		obj = pdf_dict_gets(pdf_dict_gets(pdf_trailer(doc), "Root"), "OCProperties");
+		ocgs = pdf_dict_gets(obj, "OCGs");
+		len = pdf_array_len(ocgs);
+
+		doc->ocg = fz_calloc(ctx, 1, sizeof(pdf_ocg_descriptor));
+		doc->ocg->len = len;
+		doc->ocg->ocgs = fz_calloc(ctx, len, sizeof(*doc->ocg->ocgs));
+		doc->ocg->intent = NULL;
 		for (i=0; i < len; i++)
 		{
-			pdf_obj *o = pdf_array_get(ocg, i);
-			desc->ocgs[i].num = pdf_to_num(o);
-			desc->ocgs[i].gen = pdf_to_gen(o);
-			desc->ocgs[i].state = 1;
+			pdf_obj *o = pdf_array_get(ocgs, i);
+			doc->ocg->ocgs[i].num = pdf_to_num(o);
+			doc->ocg->ocgs[i].gen = pdf_to_gen(o);
+			doc->ocg->ocgs[i].state = 1;
 		}
-		doc->ocg = desc;
+	pdf_ocg_set_config(doc, 0);
 	}
 	fz_catch(ctx)
 	{
-		if (desc)
-			fz_free(ctx, desc->ocgs);
-		fz_free(ctx, desc);
-		fz_rethrow(ctx);
+		pdf_free_ocg(ctx, doc->ocg);
+		fz_rethrow_if(ctx, FZ_ERROR_TRYLATER);
+		fz_warn(ctx, "Ignoring broken Optional Content configuration");
+		doc->ocg = fz_calloc(ctx, 1, sizeof(pdf_ocg_descriptor));
 	}
 
-	pdf_ocg_set_config(doc, 0);
+	return doc->ocg;
 }
 
 static void
@@ -1470,15 +1469,6 @@ pdf_init_document(pdf_document *doc)
 		pdf_drop_obj(dict);
 		pdf_drop_obj(nobj);
 		fz_rethrow_message(ctx, "cannot open document");
-	}
-
-	fz_try(ctx)
-	{
-		pdf_read_ocg(doc);
-	}
-	fz_catch(ctx)
-	{
-		fz_warn(ctx, "Ignoring Broken Optional Content");
 	}
 }
 

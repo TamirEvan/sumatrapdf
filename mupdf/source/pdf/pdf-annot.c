@@ -1,5 +1,7 @@
 #include "mupdf/pdf.h"
 
+extern pdf_ocg_descriptor *pdf_read_ocg(pdf_document *doc);
+
 static pdf_obj *
 resolve_dest_rec(pdf_document *doc, pdf_obj *dest, fz_link_kind kind, int depth)
 {
@@ -629,8 +631,7 @@ pdf_clone_for_view_only(pdf_document *doc, pdf_obj *obj)
 
 	fz_try(ctx)
 	{
-		if (!doc->ocg)
-			doc->ocg = fz_calloc(doc->ctx, 1, sizeof(*doc->ocg));
+		pdf_read_ocg(doc);
 		pdf_dict_puts_drop(obj, "OC", pdf_new_obj_from_str(doc, ANNOT_OC_VIEW_ONLY));
 	}
 	fz_catch(ctx)
